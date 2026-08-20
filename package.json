@@ -1,0 +1,9 @@
+{
+  "name": "satur-turnos",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Sistema de turnos de Satur Estilistas",
+  "dependencies": {
+    "@netlify/blobs": "^8.1.0"
+  }
+}

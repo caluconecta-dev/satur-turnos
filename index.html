@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Reservá tu turno — Satur Estilistas</title>
+<meta name="description" content="Reservá tu turno en Satur Estilistas, peluquería para toda la familia.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="hero-band">
+  <div class="sun-glow"></div>
+
+  <header class="site-header">
+    <div class="wrap header-wrap">
+      <img src="assets/logo-satur-watermark-white.png" alt="Satur Estilistas" class="logo-img">
+    </div>
+  </header>
+
+  <section class="hero">
+    <div class="wrap">
+      <h1>Reservá tu turno ☀️</h1>
+      <p>Elegí el servicio, el día y el horario que más te acomode. Te confirmamos a la brevedad.</p>
+    </div>
+  </section>
+</div>
+
+<main class="content">
+  <div class="wrap">
+
+    <!-- TURNO RAPIDO POR WHATSAPP -->
+    <div class="card">
+      <span class="card-badge">Reservá ahora</span>
+      <h3>Pedí tu turno por WhatsApp</h3>
+      <p class="card-desc">Completá tus datos, elegí un horario y te lo enviamos directo a Satur para confirmar. Es una solicitud de turno preferido — te respondemos por WhatsApp para confirmarlo.</p>
+
+      <form id="turno-form">
+        <div class="field-row">
+          <div class="field">
+            <label for="nombre">Nombre y apellido</label>
+            <input type="text" id="nombre" name="nombre" autocomplete="name" required>
+          </div>
+          <div class="field">
+            <label for="telefono">Teléfono</label>
+            <input type="tel" id="telefono" name="telefono" autocomplete="tel" placeholder="223 000 0000" required>
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="servicio">Servicio</label>
+          <select id="servicio" name="servicio" required>
+            <option value="" disabled selected>Elegí un servicio</option>
+          </select>
+        </div>
+
+        <div class="field" id="estilista-field" hidden>
+          <label for="estilista">¿Con quién preferís atenderte?</label>
+          <select id="estilista" name="estilista">
+            <option value="Sin preferencia">Sin preferencia</option>
+          </select>
+        </div>
+
+        <div class="field">
+          <label for="fecha">Día preferido</label>
+          <input type="date" id="fecha" name="fecha" required>
+          <p class="hint" id="dia-hint"></p>
+        </div>
+
+        <div class="field">
+          <label>Horario preferido</label>
+          <div class="slot-grid" id="slot-grid">
+            <p class="slot-empty">Elegí primero un día.</p>
+          </div>
+          <input type="hidden" id="horario" name="horario" required>
+        </div>
+
+        <div class="field">
+          <label for="comentario">Comentario (opcional)</label>
+          <textarea id="comentario" name="comentario" placeholder="Algo que quieras contarnos antes de tu turno..."></textarea>
+        </div>
+
+        <button type="submit" class="btn btn-whatsapp">
+          <span>Enviar solicitud por WhatsApp →</span>
+        </button>
+      </form>
+    </div>
+
+    <!-- CALENDARIO EN TIEMPO REAL (opcional) -->
+    <div class="card" id="calendar-card" hidden>
+      <span class="card-badge">Disponibilidad en vivo</span>
+      <h3>O reservá directo en el calendario</h3>
+      <p class="card-desc">Elegí un horario libre y quedará reservado al instante.</p>
+      <div class="calendar-embed-wrap">
+        <iframe id="calendar-iframe" style="width:100%;border:0;" height="600" loading="lazy"></iframe>
+      </div>
+    </div>
+
+    <!-- INFO -->
+    <p class="eyebrow">Info</p>
+    <h2 class="section-title">Servicios y horarios</h2>
+    <p class="section-sub">Peluquería para toda la familia en Mar del Plata.</p>
+
+    <div class="info-grid">
+      <div class="info-box">
+        <h4>Servicios</h4>
+        <ul id="servicios-list"></ul>
+      </div>
+      <div class="info-box">
+        <h4>Horarios de atención</h4>
+        <ul id="horarios-list"></ul>
+      </div>
+    </div>
+
+  </div>
+</main>
+
+<footer class="site-footer">
+  <img src="assets/simbolo-ola-blanco.png" alt="" class="footer-wave">
+  <p class="footer-tag">Satur Estilistas · Peluquería para toda la familia</p>
+  <p class="footer-links"><a id="footer-whatsapp" href="#" target="_blank" rel="noopener">Escribinos por WhatsApp</a></p>
+</footer>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* =========================================================
+   CONFIGURACIÓN DEL SALÓN — editar estos valores.
+   ========================================================= */
+const CONFIG = {
+  // Número de WhatsApp de Satur en formato internacional, sin +, espacios ni guiones.
+  whatsappNumber: "542235110199",
+
+  // Lista de servicios que se muestran en el formulario.
+  servicios: [
+    "Corte",
+    "Color",
+    "Tratamiento capilar",
+    "Peinado",
+    "Corte + Color",
+    "Corte niños"
+  ],
+
+  // Dejar vacío [] si un solo estilista atiende (no se muestra selector).
+  estilistas: ["Satur", "Brenda"],
+
+  // Horario de atención por día. null = cerrado ese día.
+  // Formato 24hs "HH:MM". Orden: domingo(0) a sábado(6).
+  horarios: {
+    0: null,               // Domingo — cerrado
+    1: null,               // Lunes — cerrado
+    2: { abre: "09:00", cierra: "19:00" }, // Martes
+    3: { abre: "09:00", cierra: "19:00" }, // Miércoles
+    4: { abre: "09:00", cierra: "19:00" }, // Jueves
+    5: { abre: "09:00", cierra: "19:00" }, // Viernes
+    6: { abre: "10:00", cierra: "19:00" }  // Sábado
+  },
+
+  // Cada cuántos minutos se ofrece un horario.
+  intervaloMinutos: 30,
+
+  // Cuántos días hacia adelante se puede reservar.
+  diasDeAnticipacion: 30,
+
+  // Link de "Cita de Google Calendar" (opcional). Si se completa, aparece
+  // la tarjeta de "disponibilidad en vivo" con el calendario embebido.
+  // Se genera desde Google Calendar > Configuración > Citas > "Copiar código de inserción".
+  googleCalendarEmbedUrl: ""
+};
+/* ========================================================= */
+
+const DIAS = ["domingo","lunes","martes","miércoles","jueves","viernes","sábado"];
+
+function pad(n){ return String(n).padStart(2,"0"); }
+
+function todayISO(){
+  const d = new Date();
+  return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+}
+
+function maxDateISO(){
+  const d = new Date();
+  d.setDate(d.getDate() + CONFIG.diasDeAnticipacion);
+  return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+}
+
+function poblarServicios(){
+  const sel = document.getElementById("servicio");
+  CONFIG.servicios.forEach(s => {
+    const opt = document.createElement("option");
+    opt.value = s; opt.textContent = s;
+    sel.appendChild(opt);
+  });
+  const list = document.getElementById("servicios-list");
+  CONFIG.servicios.forEach(s => {
+    const li = document.createElement("li");
+    li.textContent = s;
+    list.appendChild(li);
+  });
+}
+
+function poblarEstilistas(){
+  if (!CONFIG.estilistas.length) return;
+  document.getElementById("estilista-field").hidden = false;
+  const sel = document.getElementById("estilista");
+  CONFIG.estilistas.forEach(n => {
+    const opt = document.createElement("option");
+    opt.value = n; opt.textContent = n;
+    sel.appendChild(opt);
+  });
+}
+
+function poblarHorariosInfo(){
+  const list = document.getElementById("horarios-list");
+  for (let i = 0; i < 7; i++) {
+    const h = CONFIG.horarios[i];
+    const li = document.createElement("li");
+    const dia = DIAS[i][0].toUpperCase() + DIAS[i].slice(1);
+    li.textContent = h ? `${dia}: ${h.abre} a ${h.cierra}` : `${dia}: cerrado`;
+    list.appendChild(li);
+  }
+}
+
+function setupCalendarEmbed(){
+  if (!CONFIG.googleCalendarEmbedUrl) return;
+  document.getElementById("calendar-card").hidden = false;
+  document.getElementById("calendar-iframe").src = CONFIG.googleCalendarEmbedUrl;
+}
+
+function generarHorarios(fechaISO){
+  const grid = document.getElementById("slot-grid");
+  const hint = document.getElementById("dia-hint");
+  grid.innerHTML = "";
+  document.getElementById("horario").value = "";
+
+  if (!fechaISO) {
+    grid.innerHTML = '<p class="slot-empty">Elegí primero un día.</p>';
+    hint.textContent = "";
+    return;
+  }
+
+  const [y,m,d] = fechaISO.split("-").map(Number);
+  const fecha = new Date(y, m-1, d);
+  const diaSemana = fecha.getDay();
+  const horario = CONFIG.horarios[diaSemana];
+
+  hint.textContent = `${DIAS[diaSemana][0].toUpperCase()+DIAS[diaSemana].slice(1)}`;
+
+  if (!horario) {
+    grid.innerHTML = `<p class="slot-empty">Cerrado los ${DIAS[diaSemana]}. Elegí otro día 🙏</p>`;
+    return;
+  }
+
+  const [hAbreH,hAbreM] = horario.abre.split(":").map(Number);
+  const [hCierraH,hCierraM] = horario.cierra.split(":").map(Number);
+
+  const inicio = new Date(y, m-1, d, hAbreH, hAbreM);
+  const fin = new Date(y, m-1, d, hCierraH, hCierraM);
+
+  const ahora = new Date();
+  const esHoy = fechaISO === todayISO();
+
+  const slots = [];
+  for (let t = new Date(inicio); t < fin; t.setMinutes(t.getMinutes() + CONFIG.intervaloMinutos)) {
+    if (esHoy && t <= ahora) continue;
+    slots.push(`${pad(t.getHours())}:${pad(t.getMinutes())}`);
+  }
+
+  if (!slots.length) {
+    grid.innerHTML = '<p class="slot-empty">No quedan horarios disponibles ese día. Elegí otro día 🙏</p>';
+    return;
+  }
+
+  slots.forEach(s => {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "slot-btn";
+    btn.textContent = s;
+    btn.dataset.horario = s;
+    btn.addEventListener("click", () => {
+      if (btn.disabled) return;
+      document.querySelectorAll(".slot-btn.selected").forEach(b => b.classList.remove("selected"));
+      btn.classList.add("selected");
+      document.getElementById("horario").value = s;
+    });
+    grid.appendChild(btn);
+  });
+
+  refreshOcupados(fechaISO);
+}
+
+function estilistaActual(){
+  return CONFIG.estilistas.length
+    ? (document.getElementById("estilista").value || "Sin preferencia")
+    : "general";
+}
+
+function estilistaKey(nombre){
+  return (nombre && nombre !== "Sin preferencia") ? nombre : "general";
+}
+
+async function refreshOcupados(fechaISO){
+  if (!fechaISO) return;
+  const key = estilistaKey(estilistaActual());
+
+  let ocupados = [];
+  try {
+    const res = await fetch(`/api/turnos?fecha=${encodeURIComponent(fechaISO)}`);
+    if (res.ok) {
+      const data = await res.json();
+      ocupados = (data.ocupados || []).filter(o => o.estilista === key).map(o => o.horario);
+    }
+  } catch (err) {
+    // Sin conexión al sistema de disponibilidad: seguimos mostrando todos los horarios como libres.
+    return;
+  }
+
+  document.querySelectorAll(".slot-btn").forEach(btn => {
+    const ocupado = ocupados.includes(btn.dataset.horario);
+    btn.disabled = ocupado;
+    btn.classList.toggle("ocupado", ocupado);
+    if (ocupado && btn.classList.contains("selected")) {
+      btn.classList.remove("selected");
+      document.getElementById("horario").value = "";
+    }
+  });
+}
+
+function showToast(msg){
+  const toast = document.getElementById("toast");
+  toast.textContent = msg;
+  toast.classList.add("show");
+  setTimeout(() => toast.classList.remove("show"), 3200);
+}
+
+function buildWhatsappLink(datos){
+  const lineas = [
+    `Hola Satur! 👋 Quiero pedir un turno:`,
+    ``,
+    `• Nombre: ${datos.nombre}`,
+    `• Teléfono: ${datos.telefono}`,
+    `• Servicio: ${datos.servicio}`,
+  ];
+  if (datos.estilista) lineas.push(`• Estilista: ${datos.estilista}`);
+  lineas.push(`• Día: ${datos.fechaLegible}`);
+  lineas.push(`• Horario preferido: ${datos.horario} hs`);
+  if (datos.comentario) lineas.push(`• Comentario: ${datos.comentario}`);
+  lineas.push(``, `Quedo atento/a a la confirmación 🙌`);
+
+  const texto = encodeURIComponent(lineas.join("\n"));
+  return `https://wa.me/${CONFIG.whatsappNumber}?text=${texto}`;
+}
+
+function fechaLegible(fechaISO){
+  const [y,m,d] = fechaISO.split("-").map(Number);
+  const fecha = new Date(y, m-1, d);
+  const diaSemana = DIAS[fecha.getDay()];
+  return `${diaSemana} ${pad(d)}/${pad(m)}/${y}`;
+}
+
+function initFooterWhatsapp(){
+  const link = document.getElementById("footer-whatsapp");
+  link.href = `https://wa.me/${CONFIG.whatsappNumber}`;
+}
+
+function initForm(){
+  const fechaInput = document.getElementById("fecha");
+  fechaInput.min = todayISO();
+  fechaInput.max = maxDateISO();
+  fechaInput.addEventListener("change", () => generarHorarios(fechaInput.value));
+
+  if (CONFIG.estilistas.length) {
+    document.getElementById("estilista").addEventListener("change", () => refreshOcupados(fechaInput.value));
+  }
+
+  document.getElementById("turno-form").addEventListener("submit", async (e) => {
+    e.preventDefault();
+
+    if (CONFIG.whatsappNumber.startsWith("COMPLETAR")) {
+      showToast("Falta configurar el número de WhatsApp de Satur en el archivo index.html");
+      return;
+    }
+
+    const nombre = document.getElementById("nombre").value.trim();
+    const telefono = document.getElementById("telefono").value.trim();
+    const servicio = document.getElementById("servicio").value;
+    const estilista = CONFIG.estilistas.length ? document.getElementById("estilista").value : "";
+    const fecha = document.getElementById("fecha").value;
+    const horario = document.getElementById("horario").value;
+    const comentario = document.getElementById("comentario").value.trim();
+
+    if (!nombre || !telefono || !servicio || !fecha) {
+      showToast("Completá todos los campos obligatorios.");
+      return;
+    }
+    if (!horario) {
+      showToast("Elegí un horario disponible.");
+      return;
+    }
+
+    const submitBtn = e.target.querySelector('button[type="submit"]');
+    submitBtn.disabled = true;
+
+    try {
+      const res = await fetch("/api/turnos", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          fecha, horario, estilista: estilistaKey(estilista), nombre, telefono, servicio, comentario
+        })
+      });
+
+      if (res.status === 409) {
+        showToast("Ese horario se acaba de ocupar. Elegí otro, por favor 🙏");
+        await refreshOcupados(fecha);
+        submitBtn.disabled = false;
+        return;
+      }
+      // Si la función de disponibilidad no está desplegada (404) u otro error de red,
+      // seguimos igual con el pedido por WhatsApp para no bloquear al cliente.
+    } catch (err) {
+      // sin conexión al sistema de disponibilidad — continuamos igual
+    }
+
+    const url = buildWhatsappLink({
+      nombre, telefono, servicio, estilista,
+      fechaLegible: fechaLegible(fecha),
+      horario, comentario
+    });
+
+    window.open(url, "_blank", "noopener");
+    submitBtn.disabled = false;
+  });
+}
+
+poblarServicios();
+poblarEstilistas();
+poblarHorariosInfo();
+setupCalendarEmbed();
+initFooterWhatsapp();
+initForm();
+</script>
+
+</body>
+</html>
